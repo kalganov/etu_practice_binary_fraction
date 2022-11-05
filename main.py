@@ -1,65 +1,79 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from fractions import Fraction
 
 
-class BinaryFraction:
-
-    def __init__(self, source: str):
-        self.__int_part = None
-        self.__periodical = None
-        self.__non_periodical = None
-
-        if '.' in source:
-            self.__int_part, fraction_part = source.split('.')
-            if '(' in fraction_part:
-                self.__non_periodical, periodical = fraction_part.split("(")
-                self.__periodical = periodical[:-1]
-            else:
-                self.__non_periodical = fraction_part
-        else:
-            self.__int_part = source
-
-    def __repr__(self):
-        return f"{self.__int_part}.{self.__non_periodical}({self.__periodical})"
+class Converter:
+    ZERO_FRACTION = Fraction(0, 1)
 
     @staticmethod
     def binary_to_decimal(num):
         k = len(num)
         return sum(map(lambda i: int(num[i]) * (2 ** (k - i - 1)), range(k)))
 
-    def to_decimal_fraction(self):
-        return self.__periodical_part_to_decimal() + \
-               self.__non_periodical_part_to_decimal() + \
-               self.__int_part_to_decimal()
+    def to_decimal_fraction(self, binary_fraction: BinaryFraction):
+        decimal_fraction = self.__binary_periodical_part_to_decimal(
+            binary_fraction) + self.__binary_non_periodical_part_to_decimal(
+            binary_fraction) + self.__binary_int_part_to_decimal(binary_fraction)
+        return decimal_fraction
 
-    def __int_part_to_decimal(self):
-        if self.__int_part is None:
-            return Fraction(0, 1)
-        int_part_len = len(self.__int_part)
+    def __binary_int_part_to_decimal(self, binary_fraction: BinaryFraction):
+        if binary_fraction.int_part is None:
+            return Converter.ZERO_FRACTION
+        int_part_len = len(binary_fraction.int_part)
         a = 0
-        for i, el in enumerate(self.__int_part):
+        for i, el in enumerate(binary_fraction.int_part):
             a += int(el) * 2 ** (int_part_len - 1 - i)
         return Fraction(a)
 
-    def __non_periodical_part_to_decimal(self):
-        if self.__non_periodical is None:
-            return Fraction(0, 1)
-        k = len(self.__non_periodical)
-        a = self.binary_to_decimal(self.__non_periodical)
+    def __binary_non_periodical_part_to_decimal(self, binary_fraction: BinaryFraction):
+        if binary_fraction.non_periodical_part is None:
+            return Converter.ZERO_FRACTION
+        k = len(binary_fraction.non_periodical_part)
+        a = self.binary_to_decimal(binary_fraction.non_periodical_part)
         b = 2 ** k
         return Fraction(a, b)
 
-    def __periodical_part_to_decimal(self):
-        if self.__periodical is None:
-            return Fraction(0, 1)
-        k = len(self.__periodical)
-        a = self.binary_to_decimal(self.__periodical)
-        b = (2 ** k - 1) * 2 ** len(self.__non_periodical)
+    def __binary_periodical_part_to_decimal(self, binary_fraction: BinaryFraction):
+        if binary_fraction.periodical_part is None:
+            return Converter.ZERO_FRACTION
+        k = len(binary_fraction.periodical_part)
+        a = self.binary_to_decimal(binary_fraction.periodical_part)
+        b = (2 ** k - 1) * 2 ** len(binary_fraction.periodical_part)
         return Fraction(a, b)
 
 
+class BinaryFractionParser:
+
+    @staticmethod
+    def parse_binary_fraction(source: str):
+        int_part = None
+        periodical_part = None
+        non_periodical_part = None
+
+        if '.' in source:
+            int_part, fraction_part = source.split('.')
+            if '(' in fraction_part:
+                non_periodical_part, periodical = fraction_part.split("(")
+                periodical_part = periodical[:-1]
+            else:
+                non_periodical_part = fraction_part
+        else:
+            int_part = source
+
+        return BinaryFraction(int_part, periodical_part, non_periodical_part)
+
+
+@dataclass(frozen=True)
+class BinaryFraction:
+    int_part: str | None
+    periodical_part: str | None
+    non_periodical_part: str | None
+
+
 if __name__ == '__main__':
-    res = BinaryFraction("1.001").to_decimal_fraction()
-    if res.denominator == 1:
-        print(res.numerator)
-    else:
-        print(res.numerator / res.denominator)
+    fr = BinaryFractionParser.parse_binary_fraction("1.001(11)")
+    converter = Converter()
+    print(converter.to_decimal_fraction(fr))
+    print(converter)
